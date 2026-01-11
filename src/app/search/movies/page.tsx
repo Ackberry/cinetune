@@ -48,8 +48,11 @@ export default function MovieSearchPage() {
       if (error.code === "23505") {
         alert("Movie already in your library");
       } else {
+        console.error("Save error:", error);
         alert("Failed to save movie");
       }
+    } else {
+      alert("Saved to library!");
     }
 
     setSaving(null);
