@@ -64,10 +64,19 @@ export default function MessageButton({ targetUserId }: Props) {
     }
 
     // Add both participants
-    await supabase.from("conversation_participants").insert([
+    const { error: participantError } = await supabase.from("conversation_participants").insert([
       { conversation_id: conversationId, user_id: user.id },
       { conversation_id: conversationId, user_id: targetUserId },
     ]);
+
+    if (participantError) {
+      console.error("Failed to add participants:", participantError);
+      // Rollback: delete the conversation we just created
+      await supabase.from("conversations").delete().eq("id", conversationId);
+      alert("Failed to start conversation. Please try again.");
+      setLoading(false);
+      return;
+    }
 
     router.push(`/messages/${conversationId}`);
   };

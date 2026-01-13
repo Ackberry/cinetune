@@ -86,7 +86,9 @@ export default function NewGroupPage() {
 
     if (partError) {
       console.error("Participants error:", partError);
-      alert("Failed to add members");
+      // Rollback: delete the conversation we just created
+      await supabase.from("conversations").delete().eq("id", conversationId);
+      alert("Failed to add members. Please try again.");
       setCreating(false);
       return;
     }
