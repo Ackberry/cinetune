@@ -1,0 +1,37 @@
+name: Create PR (test -> main)
+
+on:
+  workflow_dispatch:
+    inputs:
+      title:
+        description: "PR title"
+        required: false
+        default: "Merge test into main"
+      body:
+        description: "PR body (optional)"
+        required: false
+        default: ""
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  create-pr:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout test
+        uses: actions/checkout@v4
+        with:
+          ref: test
+
+      - name: Create or update PR
+        uses: peter-evans/create-pull-request@v6
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          base: main
+          branch: test
+          title: ${{ inputs.title }}
+          body: ${{ inputs.body }}
+          draft: false
