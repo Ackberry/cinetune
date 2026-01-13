@@ -2,6 +2,8 @@ import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { UserMedia } from "@/types/database";
 import DeleteButton from "./delete-button";
+import Image from "next/image";
+
 
 export default async function LibraryPage() {
   const supabase = await createClient();
@@ -36,7 +38,7 @@ export default async function LibraryPage() {
                 return (
                   <div key={movie.id} className="bg-zinc-900 rounded-lg overflow-hidden group relative">
                     {meta.poster_path ? (
-                      <img
+                      <Image
                         src={`https://image.tmdb.org/t/p/w300${meta.poster_path}`}
                         alt={meta.title}
                         className="w-full aspect-[2/3] object-cover"
@@ -71,7 +73,7 @@ export default async function LibraryPage() {
                     className="flex items-center gap-4 bg-zinc-900 rounded-lg p-3 group"
                   >
                     {meta.image_url ? (
-                      <img
+                      <Image
                         src={meta.image_url}
                         alt={meta.name}
                         className="w-12 h-12 rounded object-cover"

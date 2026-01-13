@@ -2,6 +2,8 @@ import { createClient } from "@/lib/supabase/server";
 import { notFound } from "next/navigation";
 import { UserMedia } from "@/types/database";
 import MessageButton from "./message-button";
+import Image from "next/image";
+
 
 type Props = {
   params: Promise<{ username: string }>;
@@ -35,7 +37,7 @@ export default async function ProfilePage({ params }: Props) {
       <div className="max-w-6xl mx-auto">
         <div className="flex items-center gap-4 mb-8">
           {profile.avatar_url ? (
-            <img
+            <Image
               src={profile.avatar_url}
               alt={profile.display_name || username}
               className="w-20 h-20 rounded-full object-cover"
@@ -63,7 +65,7 @@ export default async function ProfilePage({ params }: Props) {
                 return (
                   <div key={movie.id} className="bg-zinc-900 rounded-lg overflow-hidden">
                     {meta.poster_path ? (
-                      <img
+                      <Image
                         src={`https://image.tmdb.org/t/p/w300${meta.poster_path}`}
                         alt={meta.title}
                         className="w-full aspect-[2/3] object-cover"
@@ -97,7 +99,7 @@ export default async function ProfilePage({ params }: Props) {
                     className="flex items-center gap-4 bg-zinc-900 rounded-lg p-3"
                   >
                     {meta.image_url ? (
-                      <img
+                      <Image
                         src={meta.image_url}
                         alt={meta.name}
                         className="w-12 h-12 rounded object-cover"
