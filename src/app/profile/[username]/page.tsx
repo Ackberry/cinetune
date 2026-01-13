@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { notFound } from "next/navigation";
 import { UserMedia } from "@/types/database";
+import MessageButton from "./message-button";
 
 type Props = {
   params: Promise<{ username: string }>;
@@ -44,10 +45,11 @@ export default async function ProfilePage({ params }: Props) {
               {(profile.display_name || username)[0].toUpperCase()}
             </div>
           )}
-          <div>
+          <div className="flex-1">
             <h1 className="text-3xl font-bold">{profile.display_name || username}</h1>
             <p className="text-zinc-400">@{username}</p>
           </div>
+          <MessageButton targetUserId={profile.id} />
         </div>
 
         <section className="mb-12">

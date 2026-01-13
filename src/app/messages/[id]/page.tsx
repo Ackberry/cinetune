@@ -1,0 +1,72 @@
+import { createClient } from "@/lib/supabase/server";
+import { redirect, notFound } from "next/navigation";
+import ChatMessages from "./chat-messages";
+
+type Props = {
+  params: Promise<{ id: string }>;
+};
+
+export default async function ChatPage({ params }: Props) {
+  const { id: conversationId } = await params;
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+
+  if (!user) {
+    redirect("/login");
+  }
+
+  // Verify user is part of this conversation
+  const { data: participant } = await supabase
+    .from("conversation_participants")
+    .select("conversation_id")
+    .eq("conversation_id", conversationId)
+    .eq("user_id", user.id)
+    .single();
+
+  if (!participant) {
+    notFound();
+  }
+
+  // Get conversation details
+  const { data: conversation } = await supabase
+    .from("conversations")
+    .select("id, is_group, name")
+    .eq("id", conversationId)
+    .single();
+
+  // Get other participant for DMs
+  const { data: otherParticipant } = await supabase
+    .from("conversation_participants")
+    .select("profiles(username, display_name, avatar_url)")
+    .eq("conversation_id", conversationId)
+    .neq("user_id", user.id)
+    .single();
+
+  // Get initial messages
+  const { data: messages } = await supabase
+    .from("messages")
+    .select("id, content, created_at, sender_id, profiles(username, display_name)")
+    .eq("conversation_id", conversationId)
+    .order("created_at", { ascending: true })
+    .limit(50);
+
+  const chatName = conversation?.is_group
+    ? conversation.name || "Group"
+    : (otherParticipant?.profiles as { display_name: string | null; username: string | null })?.display_name ||
+      (otherParticipant?.profiles as { username: string | null })?.username ||
+      "Chat";
+
+  return (
+    <div className="min-h-screen bg-zinc-950 text-white flex flex-col">
+      <header className="bg-zinc-900 border-b border-zinc-800 p-4">
+        <h1 className="text-xl font-semibold">{chatName}</h1>
+      </header>
+
+      <ChatMessages
+        conversationId={conversationId}
+        currentUserId={user.id}
+        initialMessages={messages || []}
+      />
+    </div>
+  );
+}

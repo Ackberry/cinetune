@@ -1,0 +1,132 @@
+"use client";
+
+import { createClient } from "@/lib/supabase/client";
+import { useEffect, useRef, useState } from "react";
+
+type Message = {
+  id: string;
+  content: string;
+  created_at: string;
+  sender_id: string;
+  profiles: {
+    username: string | null;
+    display_name: string | null;
+  } | null;
+};
+
+type Props = {
+  conversationId: string;
+  currentUserId: string;
+  initialMessages: Message[];
+};
+
+export default function ChatMessages({ conversationId, currentUserId, initialMessages }: Props) {
+  const [messages, setMessages] = useState<Message[]>(initialMessages);
+  const [newMessage, setNewMessage] = useState("");
+  const [sending, setSending] = useState(false);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const supabase = createClient();
+
+  // Scroll to bottom when messages change
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
+
+  // Subscribe to new messages
+  useEffect(() => {
+    const channel = supabase
+      .channel(`messages:${conversationId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "messages",
+          filter: `conversation_id=eq.${conversationId}`,
+        },
+        async (payload) => {
+          // Fetch the complete message with sender info
+          const { data: newMsg } = await supabase
+            .from("messages")
+            .select("id, content, created_at, sender_id, profiles(username, display_name)")
+            .eq("id", payload.new.id)
+            .single();
+
+          if (newMsg) {
+            setMessages((prev) => [...prev, newMsg as Message]);
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [conversationId, supabase]);
+
+  const handleSend = async () => {
+    if (!newMessage.trim() || sending) return;
+
+    setSending(true);
+    const { error } = await supabase.from("messages").insert({
+      conversation_id: conversationId,
+      sender_id: currentUserId,
+      content: newMessage.trim(),
+    });
+
+    if (!error) {
+      setNewMessage("");
+    }
+    setSending(false);
+  };
+
+  const formatTime = (dateString: string) => {
+    return new Date(dateString).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  };
+
+  return (
+    <>
+      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+        {messages.map((msg) => {
+          const isOwn = msg.sender_id === currentUserId;
+          return (
+            <div key={msg.id} className={`flex ${isOwn ? "justify-end" : "justify-start"}`}>
+              <div className={`max-w-[70%] ${isOwn ? "bg-blue-600" : "bg-zinc-800"} rounded-2xl px-4 py-2`}>
+                {!isOwn && (
+                  <p className="text-xs text-zinc-400 mb-1">
+                    {msg.profiles?.display_name || msg.profiles?.username}
+                  </p>
+                )}
+                <p>{msg.content}</p>
+                <p className={`text-xs mt-1 ${isOwn ? "text-blue-200" : "text-zinc-500"}`}>
+                  {formatTime(msg.created_at)}
+                </p>
+              </div>
+            </div>
+          );
+        })}
+        <div ref={messagesEndRef} />
+      </div>
+
+      <div className="bg-zinc-900 border-t border-zinc-800 p-4">
+        <div className="flex gap-2">
+          <input
+            type="text"
+            value={newMessage}
+            onChange={(e) => setNewMessage(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && handleSend()}
+            placeholder="Type a message..."
+            className="flex-1 bg-zinc-800 border border-zinc-700 rounded-full px-4 py-2 focus:outline-none focus:border-zinc-500"
+          />
+          <button
+            onClick={handleSend}
+            disabled={sending || !newMessage.trim()}
+            className="bg-blue-600 text-white px-6 py-2 rounded-full font-medium hover:bg-blue-500 disabled:opacity-50"
+          >
+            Send
+          </button>
+        </div>
+      </div>
+    </>
+  );
+}
