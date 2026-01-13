@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { SpotifyTrack } from "@/types/spotify";
 import { createClient } from "@/lib/supabase/client";
+import Image from "next/image";
+
 
 export default function MusicSearchPage() {
   const [query, setQuery] = useState("");
@@ -94,7 +96,7 @@ export default function MusicSearchPage() {
               className="flex items-center gap-4 bg-zinc-900 rounded-lg p-3 hover:bg-zinc-800 transition-colors"
             >
               {track.album.images[0] ? (
-                <img
+                <Image
                   src={track.album.images[0].url}
                   alt={track.album.name}
                   className="w-14 h-14 rounded object-cover"
