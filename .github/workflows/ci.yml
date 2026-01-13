@@ -1,41 +1,40 @@
-name: CI workflow
+name: CI
 
 on:
-    push:
-        branches: ["test"]
-    pull_request:
-        branches: ["main"]
-    
-concurrency:
-    group: ci-${{ github.ref }}
-    cancel-in-progress: true
+  push:
+    branches: ["test"]
+  pull_request:
+    branches: ["main"]
 
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
 
 permissions:
-    contents: read
+  contents: read
 
 jobs:
-    build:
-        runs-on: ubuntu-latest
+  build:
+    runs-on: ubuntu-latest
 
-        steps:
-            - name: Checkout
-              uses: actions/checkout@v4
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
 
-            - name: Setup Node
-              uses: actions/setupnode@v4
-              with:
-                node-version: "20"
-                cache: npm
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
 
-            - name: Install
-              run: npm ci
+      - name: Install
+        run: npm ci
 
-            - name: Lint
-              run: npm run lint
+      - name: Lint
+        run: npm run lint
 
-            - name: Typecheck
-              run: npm run typecheck
-            
-            - name: Build
-              run: npm run build
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Build
+        run: npm run build
