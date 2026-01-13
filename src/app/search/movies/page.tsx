@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { TMDBMovie } from "@/types/tmdb";
 import { createClient } from "@/lib/supabase/client";
+import Image from "next/image";
 
 export default function MovieSearchPage() {
   const [query, setQuery] = useState("");
@@ -85,7 +86,7 @@ export default function MovieSearchPage() {
           {results.map((movie) => (
             <div key={movie.id} className="bg-zinc-900 rounded-lg overflow-hidden">
               {movie.poster_path ? (
-                <img
+                <Image
                   src={`https://image.tmdb.org/t/p/w300${movie.poster_path}`}
                   alt={movie.title}
                   className="w-full aspect-[2/3] object-cover"
