@@ -76,11 +76,15 @@ export default async function MessagesPage() {
     );
     const lastMsg = lastMessages?.find((m) => m.conversation_id === conv.id);
 
+    // Handle profiles being returned as array or object
+    const profiles = otherParticipant?.profiles;
+    const otherUser = Array.isArray(profiles) ? profiles[0] : profiles;
+
     return {
       id: conv.id,
       is_group: conv.is_group,
       name: conv.name,
-      other_user: otherParticipant?.profiles as Conversation["other_user"],
+      other_user: (otherUser ?? null) as Conversation["other_user"],
       last_message: lastMsg ? { content: lastMsg.content, created_at: lastMsg.created_at } : null,
     };
   });

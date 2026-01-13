@@ -14,14 +14,29 @@ type Message = {
   } | null;
 };
 
+type RawMessage = {
+  id: string;
+  content: string;
+  created_at: string;
+  sender_id: string;
+  profiles: { username: string | null; display_name: string | null } | { username: string | null; display_name: string | null }[] | null;
+};
+
+function normalizeMessage(raw: RawMessage): Message {
+  return {
+    ...raw,
+    profiles: Array.isArray(raw.profiles) ? raw.profiles[0] ?? null : raw.profiles,
+  };
+}
+
 type Props = {
   conversationId: string;
   currentUserId: string;
-  initialMessages: Message[];
+  initialMessages: RawMessage[];
 };
 
 export default function ChatMessages({ conversationId, currentUserId, initialMessages }: Props) {
-  const [messages, setMessages] = useState<Message[]>(initialMessages);
+  const [messages, setMessages] = useState<Message[]>(() => initialMessages.map(normalizeMessage));
   const [newMessage, setNewMessage] = useState("");
   const [sending, setSending] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -53,7 +68,7 @@ export default function ChatMessages({ conversationId, currentUserId, initialMes
             .single();
 
           if (newMsg) {
-            setMessages((prev) => [...prev, newMsg as Message]);
+            setMessages((prev) => [...prev, normalizeMessage(newMsg as RawMessage)]);
           }
         }
       )

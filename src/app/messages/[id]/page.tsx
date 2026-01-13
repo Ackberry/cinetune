@@ -50,11 +50,14 @@ export default async function ChatPage({ params }: Props) {
     .order("created_at", { ascending: true })
     .limit(50);
 
+  // Handle profiles being returned as array or object
+  const otherProfile = Array.isArray(otherParticipant?.profiles)
+    ? otherParticipant.profiles[0]
+    : otherParticipant?.profiles;
+
   const chatName = conversation?.is_group
     ? conversation.name || "Group"
-    : (otherParticipant?.profiles as { display_name: string | null; username: string | null })?.display_name ||
-      (otherParticipant?.profiles as { username: string | null })?.username ||
-      "Chat";
+    : otherProfile?.display_name || otherProfile?.username || "Chat";
 
   return (
     <div className="min-h-screen bg-zinc-950 text-white flex flex-col">
@@ -65,7 +68,7 @@ export default async function ChatPage({ params }: Props) {
       <ChatMessages
         conversationId={conversationId}
         currentUserId={user.id}
-        initialMessages={messages || []}
+        initialMessages={(messages || []) as Parameters<typeof ChatMessages>[0]["initialMessages"]}
       />
     </div>
   );
