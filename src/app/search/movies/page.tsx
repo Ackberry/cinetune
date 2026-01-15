@@ -89,6 +89,8 @@ export default function MovieSearchPage() {
                 <Image
                   src={`https://image.tmdb.org/t/p/w300${movie.poster_path}`}
                   alt={movie.title}
+                  width={300}
+                  height={450}
                   className="w-full aspect-[2/3] object-cover"
                 />
               ) : (
