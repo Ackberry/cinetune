@@ -16,7 +16,7 @@ export default async function ChatPage({ params }: Props) {
   }
 
   // Verify user is part of this conversation
-  const { data: participant } = await supabase
+  const { data: participant, error: participantError } = await supabase
     .from("conversation_participants")
     .select("conversation_id")
     .eq("conversation_id", conversationId)
