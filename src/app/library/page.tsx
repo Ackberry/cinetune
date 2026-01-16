@@ -41,6 +41,8 @@ export default async function LibraryPage() {
                       <Image
                         src={`https://image.tmdb.org/t/p/w300${meta.poster_path}`}
                         alt={meta.title}
+                        width={300}
+                        height={450}
                         className="w-full aspect-[2/3] object-cover"
                       />
                     ) : (
@@ -70,12 +72,14 @@ export default async function LibraryPage() {
                 return (
                   <div
                     key={track.id}
-                    className="flex items-center gap-4 bg-zinc-900 rounded-lg p-3 group"
+                    className="relative flex items-center gap-4 bg-zinc-900 rounded-lg p-3 group"
                   >
                     {meta.image_url ? (
                       <Image
                         src={meta.image_url}
                         alt={meta.name}
+                        width={48}
+                        height={48}
                         className="w-12 h-12 rounded object-cover"
                       />
                     ) : (

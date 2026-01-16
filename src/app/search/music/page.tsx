@@ -20,7 +20,8 @@ export default function MusicSearchPage() {
     setLoading(true);
     const response = await fetch(`/api/music/search?q=${encodeURIComponent(query)}`);
     const data = await response.json();
-    setResults(data.tracks?.items || []);
+    const items = data.tracks?.items || [];
+    setResults(items);
     setLoading(false);
   };
 
@@ -90,40 +91,45 @@ export default function MusicSearchPage() {
         </div>
 
         <div className="space-y-2">
-          {results.map((track) => (
-            <div
-              key={track.id}
-              className="flex items-center gap-4 bg-zinc-900 rounded-lg p-3 hover:bg-zinc-800 transition-colors"
-            >
-              {track.album.images[0] ? (
-                <Image
-                  src={track.album.images[0].url}
-                  alt={track.album.name}
-                  className="w-14 h-14 rounded object-cover"
-                />
-              ) : (
-                <div className="w-14 h-14 rounded bg-zinc-800 flex items-center justify-center text-zinc-500">
-                  ♪
-                </div>
-              )}
-              <div className="flex-1 min-w-0">
-                <h3 className="font-medium truncate">{track.name}</h3>
-                <p className="text-sm text-zinc-400 truncate">
-                  {track.artists.map((a) => a.name).join(", ")}
-                </p>
-              </div>
-              <span className="text-sm text-zinc-500">
-                {formatDuration(track.duration_ms)}
-              </span>
-              <button
-                onClick={() => handleSave(track)}
-                disabled={saving === track.id}
-                className="bg-zinc-800 px-4 py-2 rounded text-sm hover:bg-zinc-700 disabled:opacity-50"
+          {results.map((track, index) => {
+            const image = track.album.images[0];
+            return (
+              <div
+                key={track.id}
+                className="flex items-center gap-4 bg-zinc-900 rounded-lg p-3 hover:bg-zinc-800 transition-colors"
               >
-                {saving === track.id ? "..." : "Save"}
-              </button>
-            </div>
-          ))}
+                {image ? (
+                  <Image
+                    src={image.url}
+                    alt={track.album.name}
+                    width={56}
+                    height={56}
+                    className="w-14 h-14 rounded object-cover"
+                  />
+                ) : (
+                  <div className="w-14 h-14 rounded bg-zinc-800 flex items-center justify-center text-zinc-500">
+                    ♪
+                  </div>
+                )}
+                <div className="flex-1 min-w-0">
+                  <h3 className="font-medium truncate">{track.name}</h3>
+                  <p className="text-sm text-zinc-400 truncate">
+                    {track.artists.map((a) => a.name).join(", ")}
+                  </p>
+                </div>
+                <span className="text-sm text-zinc-500">
+                  {formatDuration(track.duration_ms)}
+                </span>
+                <button
+                  onClick={() => handleSave(track)}
+                  disabled={saving === track.id}
+                  className="bg-zinc-800 px-4 py-2 rounded text-sm hover:bg-zinc-700 disabled:opacity-50"
+                >
+                  {saving === track.id ? "..." : "Save"}
+                </button>
+              </div>
+            );
+          })}
         </div>
 
         {results.length === 0 && !loading && (

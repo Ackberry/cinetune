@@ -40,6 +40,8 @@ export default async function ProfilePage({ params }: Props) {
             <Image
               src={profile.avatar_url}
               alt={profile.display_name || username}
+              width={80}
+              height={80}
               className="w-20 h-20 rounded-full object-cover"
             />
           ) : (
@@ -68,6 +70,8 @@ export default async function ProfilePage({ params }: Props) {
                       <Image
                         src={`https://image.tmdb.org/t/p/w300${meta.poster_path}`}
                         alt={meta.title}
+                        width={300}
+                        height={450}
                         className="w-full aspect-[2/3] object-cover"
                       />
                     ) : (
@@ -102,6 +106,8 @@ export default async function ProfilePage({ params }: Props) {
                       <Image
                         src={meta.image_url}
                         alt={meta.name}
+                        width={48}
+                        height={48}
                         className="w-12 h-12 rounded object-cover"
                       />
                     ) : (

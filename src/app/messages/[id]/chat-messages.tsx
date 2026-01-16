@@ -29,16 +29,51 @@ function normalizeMessage(raw: RawMessage): Message {
   };
 }
 
+function getReadLabel(
+  messages: Message[],
+  currentUserId: string,
+  otherLastReadAt: string | null
+) {
+  const lastOwn = [...messages]
+    .reverse()
+    .find((msg) => msg.sender_id === currentUserId);
+
+  if (!lastOwn) {
+    return "";
+  }
+
+  if (!otherLastReadAt) {
+    return "Sent";
+  }
+
+  const lastReadTime = new Date(otherLastReadAt).getTime();
+  const lastOwnTime = new Date(lastOwn.created_at).getTime();
+  return lastReadTime >= lastOwnTime ? "Read" : "Sent";
+}
+
 type Props = {
   conversationId: string;
   currentUserId: string;
   initialMessages: RawMessage[];
+  chatName: string;
+  initialUnreadCount: number;
+  otherLastReadAt: string | null;
+  isGroup: boolean;
 };
 
-export default function ChatMessages({ conversationId, currentUserId, initialMessages }: Props) {
+export default function ChatMessages({
+  conversationId,
+  currentUserId,
+  initialMessages,
+  chatName,
+  initialUnreadCount,
+  otherLastReadAt,
+  isGroup,
+}: Props) {
   const [messages, setMessages] = useState<Message[]>(() => initialMessages.map(normalizeMessage));
   const [newMessage, setNewMessage] = useState("");
   const [sending, setSending] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(initialUnreadCount);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const supabase = createClient();
 
@@ -49,6 +84,10 @@ export default function ChatMessages({ conversationId, currentUserId, initialMes
 
   // Subscribe to new messages
   useEffect(() => {
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/f43f4436-0bd4-44e2-859b-c9a5c45048f7',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'src/app/messages/[id]/chat-messages.tsx:subscribe:start',message:'subscribe start',data:{conversationId},timestamp:Date.now(),sessionId:'debug-session',runId:'pre-fix',hypothesisId:'H1'})}).catch(()=>{});
+    // #endregion
+
     const channel = supabase
       .channel(`messages:${conversationId}`)
       .on(
@@ -60,6 +99,10 @@ export default function ChatMessages({ conversationId, currentUserId, initialMes
           filter: `conversation_id=eq.${conversationId}`,
         },
         async (payload) => {
+          // #region agent log
+          fetch('http://127.0.0.1:7242/ingest/f43f4436-0bd4-44e2-859b-c9a5c45048f7',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'src/app/messages/[id]/chat-messages.tsx:subscribe:payload',message:'received payload',data:{conversationId,payloadId:payload?.new?.id ?? null},timestamp:Date.now(),sessionId:'debug-session',runId:'pre-fix',hypothesisId:'H2'})}).catch(()=>{});
+          // #endregion
+
           // Fetch the complete message with sender info
           const { data: newMsg } = await supabase
             .from("messages")
@@ -67,27 +110,65 @@ export default function ChatMessages({ conversationId, currentUserId, initialMes
             .eq("id", payload.new.id)
             .single();
 
+          // #region agent log
+          fetch('http://127.0.0.1:7242/ingest/f43f4436-0bd4-44e2-859b-c9a5c45048f7',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'src/app/messages/[id]/chat-messages.tsx:subscribe:fetch',message:'fetched message after payload',data:{conversationId,found:!!newMsg,fromSender:newMsg?.sender_id ?? null,currentUserId},timestamp:Date.now(),sessionId:'debug-session',runId:'pre-fix',hypothesisId:'H3'})}).catch(()=>{});
+          // #endregion
+
           if (newMsg) {
-            setMessages((prev) => [...prev, normalizeMessage(newMsg as RawMessage)]);
+            setMessages((prev) => {
+              // #region agent log
+              fetch('http://127.0.0.1:7242/ingest/f43f4436-0bd4-44e2-859b-c9a5c45048f7',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'src/app/messages/[id]/chat-messages.tsx:subscribe:setMessages',message:'appending message',data:{conversationId,prevCount:prev.length,nextCount:prev.length + 1,newMsgId:newMsg.id},timestamp:Date.now(),sessionId:'debug-session',runId:'pre-fix',hypothesisId:'H4'})}).catch(()=>{});
+              // #endregion
+              return [...prev, normalizeMessage(newMsg as RawMessage)];
+            });
           }
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/f43f4436-0bd4-44e2-859b-c9a5c45048f7',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'src/app/messages/[id]/chat-messages.tsx:subscribe:status',message:'channel status',data:{conversationId,status},timestamp:Date.now(),sessionId:'debug-session',runId:'pre-fix',hypothesisId:'H1'})}).catch(()=>{});
+        // #endregion
+      });
+
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/f43f4436-0bd4-44e2-859b-c9a5c45048f7',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'src/app/messages/[id]/chat-messages.tsx:subscribe:created',message:'channel subscribed',data:{conversationId},timestamp:Date.now(),sessionId:'debug-session',runId:'pre-fix',hypothesisId:'H1'})}).catch(()=>{});
+    // #endregion
 
     return () => {
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/f43f4436-0bd4-44e2-859b-c9a5c45048f7',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'src/app/messages/[id]/chat-messages.tsx:subscribe:cleanup',message:'channel cleanup',data:{conversationId},timestamp:Date.now(),sessionId:'debug-session',runId:'pre-fix',hypothesisId:'H4'})}).catch(()=>{});
+      // #endregion
       supabase.removeChannel(channel);
     };
   }, [conversationId, supabase]);
+
+  // Mark as read when chat opens
+  useEffect(() => {
+    const markRead = async () => {
+      setUnreadCount(0);
+    };
+
+    markRead();
+  }, [conversationId, currentUserId, supabase]);
 
   const handleSend = async () => {
     if (!newMessage.trim() || sending) return;
 
     setSending(true);
+
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/f43f4436-0bd4-44e2-859b-c9a5c45048f7',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'src/app/messages/[id]/chat-messages.tsx:handleSend:start',message:'send start',data:{conversationId,messageLength:newMessage.trim().length,sendingFlag:sending},timestamp:Date.now(),sessionId:'debug-session',runId:'pre-fix',hypothesisId:'H2'})}).catch(()=>{});
+    // #endregion
+
     const { error } = await supabase.from("messages").insert({
       conversation_id: conversationId,
       sender_id: currentUserId,
       content: newMessage.trim(),
     });
+
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/f43f4436-0bd4-44e2-859b-c9a5c45048f7',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'src/app/messages/[id]/chat-messages.tsx:handleSend:afterInsert',message:'send insert result',data:{conversationId,insertErrorMessage:error?.message ?? null,insertErrorCode:error?.code ?? null},timestamp:Date.now(),sessionId:'debug-session',runId:'pre-fix',hypothesisId:'H3'})}).catch(()=>{});
+    // #endregion
 
     if (!error) {
       setNewMessage("");
@@ -100,7 +181,23 @@ export default function ChatMessages({ conversationId, currentUserId, initialMes
   };
 
   return (
-    <>
+    <div className="flex-1 flex flex-col">
+      <header className="bg-zinc-900 border-b border-zinc-800 p-4 flex items-center justify-between">
+        <h1 className="text-xl font-semibold">{chatName}</h1>
+        <div className="flex items-center gap-3">
+          {unreadCount > 0 && (
+            <span className="bg-blue-600 text-white text-xs px-2 py-1 rounded-full">
+              {unreadCount} unread
+            </span>
+          )}
+          {!isGroup && (
+            <span className="text-xs text-zinc-400">
+              {getReadLabel(messages, currentUserId, otherLastReadAt)}
+            </span>
+          )}
+        </div>
+      </header>
+
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
         {messages.map((msg) => {
           const isOwn = msg.sender_id === currentUserId;
@@ -142,6 +239,6 @@ export default function ChatMessages({ conversationId, currentUserId, initialMes
           </button>
         </div>
       </div>
-    </>
+    </div>
   );
 }

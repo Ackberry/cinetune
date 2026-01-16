@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import { createClient } from "@/lib/supabase/server";
 import Link from "next/link";
+import Nav from "./nav";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -18,11 +20,23 @@ export const metadata: Metadata = {
   description: "Share and discover music and movies",
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  const { data: profile } = user
+    ? await supabase
+        .from("profiles")
+        .select("username")
+        .eq("id", user.id)
+        .single()
+    : { data: null };
+
   return (
     <html lang="en">
       <body
@@ -34,23 +48,10 @@ export default function RootLayout({
               <Link href="/" className="text-xl font-bold">
                 CineTune
               </Link>
-              <nav className="flex items-center gap-4 text-sm">
-                <Link href="/search/movies" className="text-zinc-300 hover:text-white">
-                  Movies
-                </Link>
-                <Link href="/search/music" className="text-zinc-300 hover:text-white">
-                  Music
-                </Link>
-                <Link href="/library" className="text-zinc-300 hover:text-white">
-                  Library
-                </Link>
-                <Link href="/messages" className="text-zinc-300 hover:text-white">
-                  Messages
-                </Link>
-                <Link href="/settings" className="text-zinc-300 hover:text-white">
-                  Settings
-                </Link>
-              </nav>
+              <Nav
+                userLabel={profile?.username || user?.email || null}
+                isAuthed={!!user}
+              />
             </div>
           </header>
           <main>{children}</main>
