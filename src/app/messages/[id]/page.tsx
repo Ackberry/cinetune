@@ -16,7 +16,7 @@ export default async function ChatPage({ params }: Props) {
   }
 
   // Verify user is part of this conversation
-  const { data: participant, error: participantError } = await supabase
+  const { data: participant } = await supabase
     .from("conversation_participants")
     .select("conversation_id")
     .eq("conversation_id", conversationId)
@@ -33,16 +33,6 @@ export default async function ChatPage({ params }: Props) {
     .select("id, is_group, name")
     .eq("id", conversationId)
     .single();
-
-  let unreadCount = 0;
-  if (participant) {
-    const { count } = await supabase
-      .from("messages")
-      .select("id", { count: "exact", head: true })
-      .eq("conversation_id", conversationId)
-      .neq("sender_id", user.id);
-    unreadCount = count || 0;
-  }
 
   // Get other participant for DMs
   const { data: otherParticipant } = await supabase
@@ -68,8 +58,6 @@ export default async function ChatPage({ params }: Props) {
   const chatName = conversation?.is_group
     ? conversation.name || "Group"
     : otherProfile?.display_name || otherProfile?.username || "Chat";
-  const otherLastReadAt = null;
-
   return (
     <div className="min-h-screen bg-zinc-950 text-white flex flex-col">
       <ChatMessages
@@ -77,9 +65,6 @@ export default async function ChatPage({ params }: Props) {
         currentUserId={user.id}
         initialMessages={(messages || []) as Parameters<typeof ChatMessages>[0]["initialMessages"]}
         chatName={chatName}
-        initialUnreadCount={unreadCount}
-        otherLastReadAt={otherLastReadAt}
-        isGroup={!!conversation?.is_group}
       />
     </div>
   );

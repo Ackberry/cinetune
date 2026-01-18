@@ -29,26 +29,29 @@ function normalizeMessage(raw: RawMessage): Message {
   };
 }
 
-function getReadLabel(
-  messages: Message[],
-  currentUserId: string,
-  otherLastReadAt: string | null
-) {
-  const lastOwn = [...messages]
-    .reverse()
-    .find((msg) => msg.sender_id === currentUserId);
+function getDateKey(dateString: string) {
+  const date = new Date(dateString);
+  return `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
+}
 
-  if (!lastOwn) {
-    return "";
+function formatDateLabel(dateString: string) {
+  const date = new Date(dateString);
+  const now = new Date();
+  const todayKey = getDateKey(now.toISOString());
+  const dateKey = getDateKey(dateString);
+
+  if (dateKey === todayKey) {
+    return "Today";
   }
 
-  if (!otherLastReadAt) {
-    return "Sent";
+  const yesterday = new Date(now);
+  yesterday.setDate(now.getDate() - 1);
+  const yesterdayKey = getDateKey(yesterday.toISOString());
+  if (dateKey === yesterdayKey) {
+    return "Yesterday";
   }
 
-  const lastReadTime = new Date(otherLastReadAt).getTime();
-  const lastOwnTime = new Date(lastOwn.created_at).getTime();
-  return lastReadTime >= lastOwnTime ? "Read" : "Sent";
+  return date.toLocaleDateString([], { month: "short", day: "numeric", year: "numeric" });
 }
 
 type Props = {
@@ -56,9 +59,6 @@ type Props = {
   currentUserId: string;
   initialMessages: RawMessage[];
   chatName: string;
-  initialUnreadCount: number;
-  otherLastReadAt: string | null;
-  isGroup: boolean;
 };
 
 export default function ChatMessages({
@@ -66,14 +66,10 @@ export default function ChatMessages({
   currentUserId,
   initialMessages,
   chatName,
-  initialUnreadCount,
-  otherLastReadAt,
-  isGroup,
 }: Props) {
   const [messages, setMessages] = useState<Message[]>(() => initialMessages.map(normalizeMessage));
   const [newMessage, setNewMessage] = useState("");
   const [sending, setSending] = useState(false);
-  const [unreadCount, setUnreadCount] = useState(initialUnreadCount);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const supabase = createClient();
 
@@ -84,10 +80,6 @@ export default function ChatMessages({
 
   // Subscribe to new messages
   useEffect(() => {
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/f43f4436-0bd4-44e2-859b-c9a5c45048f7',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'src/app/messages/[id]/chat-messages.tsx:subscribe:start',message:'subscribe start',data:{conversationId},timestamp:Date.now(),sessionId:'debug-session',runId:'pre-fix',hypothesisId:'H1'})}).catch(()=>{});
-    // #endregion
-
     const channel = supabase
       .channel(`messages:${conversationId}`)
       .on(
@@ -99,10 +91,6 @@ export default function ChatMessages({
           filter: `conversation_id=eq.${conversationId}`,
         },
         async (payload) => {
-          // #region agent log
-          fetch('http://127.0.0.1:7242/ingest/f43f4436-0bd4-44e2-859b-c9a5c45048f7',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'src/app/messages/[id]/chat-messages.tsx:subscribe:payload',message:'received payload',data:{conversationId,payloadId:payload?.new?.id ?? null},timestamp:Date.now(),sessionId:'debug-session',runId:'pre-fix',hypothesisId:'H2'})}).catch(()=>{});
-          // #endregion
-
           // Fetch the complete message with sender info
           const { data: newMsg } = await supabase
             .from("messages")
@@ -110,34 +98,14 @@ export default function ChatMessages({
             .eq("id", payload.new.id)
             .single();
 
-          // #region agent log
-          fetch('http://127.0.0.1:7242/ingest/f43f4436-0bd4-44e2-859b-c9a5c45048f7',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'src/app/messages/[id]/chat-messages.tsx:subscribe:fetch',message:'fetched message after payload',data:{conversationId,found:!!newMsg,fromSender:newMsg?.sender_id ?? null,currentUserId},timestamp:Date.now(),sessionId:'debug-session',runId:'pre-fix',hypothesisId:'H3'})}).catch(()=>{});
-          // #endregion
-
           if (newMsg) {
-            setMessages((prev) => {
-              // #region agent log
-              fetch('http://127.0.0.1:7242/ingest/f43f4436-0bd4-44e2-859b-c9a5c45048f7',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'src/app/messages/[id]/chat-messages.tsx:subscribe:setMessages',message:'appending message',data:{conversationId,prevCount:prev.length,nextCount:prev.length + 1,newMsgId:newMsg.id},timestamp:Date.now(),sessionId:'debug-session',runId:'pre-fix',hypothesisId:'H4'})}).catch(()=>{});
-              // #endregion
-              return [...prev, normalizeMessage(newMsg as RawMessage)];
-            });
+            setMessages((prev) => [...prev, normalizeMessage(newMsg as RawMessage)]);
           }
         }
       )
-      .subscribe((status) => {
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/f43f4436-0bd4-44e2-859b-c9a5c45048f7',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'src/app/messages/[id]/chat-messages.tsx:subscribe:status',message:'channel status',data:{conversationId,status},timestamp:Date.now(),sessionId:'debug-session',runId:'pre-fix',hypothesisId:'H1'})}).catch(()=>{});
-        // #endregion
-      });
-
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/f43f4436-0bd4-44e2-859b-c9a5c45048f7',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'src/app/messages/[id]/chat-messages.tsx:subscribe:created',message:'channel subscribed',data:{conversationId},timestamp:Date.now(),sessionId:'debug-session',runId:'pre-fix',hypothesisId:'H1'})}).catch(()=>{});
-    // #endregion
+      .subscribe();
 
     return () => {
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/f43f4436-0bd4-44e2-859b-c9a5c45048f7',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'src/app/messages/[id]/chat-messages.tsx:subscribe:cleanup',message:'channel cleanup',data:{conversationId},timestamp:Date.now(),sessionId:'debug-session',runId:'pre-fix',hypothesisId:'H4'})}).catch(()=>{});
-      // #endregion
       supabase.removeChannel(channel);
     };
   }, [conversationId, supabase]);
@@ -145,7 +113,6 @@ export default function ChatMessages({
   // Mark as read when chat opens
   useEffect(() => {
     const markRead = async () => {
-      setUnreadCount(0);
     };
 
     markRead();
@@ -156,19 +123,11 @@ export default function ChatMessages({
 
     setSending(true);
 
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/f43f4436-0bd4-44e2-859b-c9a5c45048f7',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'src/app/messages/[id]/chat-messages.tsx:handleSend:start',message:'send start',data:{conversationId,messageLength:newMessage.trim().length,sendingFlag:sending},timestamp:Date.now(),sessionId:'debug-session',runId:'pre-fix',hypothesisId:'H2'})}).catch(()=>{});
-    // #endregion
-
     const { error } = await supabase.from("messages").insert({
       conversation_id: conversationId,
       sender_id: currentUserId,
       content: newMessage.trim(),
     });
-
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/f43f4436-0bd4-44e2-859b-c9a5c45048f7',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'src/app/messages/[id]/chat-messages.tsx:handleSend:afterInsert',message:'send insert result',data:{conversationId,insertErrorMessage:error?.message ?? null,insertErrorCode:error?.code ?? null},timestamp:Date.now(),sessionId:'debug-session',runId:'pre-fix',hypothesisId:'H3'})}).catch(()=>{});
-    // #endregion
 
     if (!error) {
       setNewMessage("");
@@ -184,35 +143,35 @@ export default function ChatMessages({
     <div className="flex-1 flex flex-col">
       <header className="bg-zinc-900 border-b border-zinc-800 p-4 flex items-center justify-between">
         <h1 className="text-xl font-semibold">{chatName}</h1>
-        <div className="flex items-center gap-3">
-          {unreadCount > 0 && (
-            <span className="bg-blue-600 text-white text-xs px-2 py-1 rounded-full">
-              {unreadCount} unread
-            </span>
-          )}
-          {!isGroup && (
-            <span className="text-xs text-zinc-400">
-              {getReadLabel(messages, currentUserId, otherLastReadAt)}
-            </span>
-          )}
-        </div>
       </header>
 
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
-        {messages.map((msg) => {
+        {messages.map((msg, index) => {
           const isOwn = msg.sender_id === currentUserId;
+          const prev = messages[index - 1];
+          const showDateDivider =
+            index === 0 || getDateKey(prev.created_at) !== getDateKey(msg.created_at);
           return (
-            <div key={msg.id} className={`flex ${isOwn ? "justify-end" : "justify-start"}`}>
-              <div className={`max-w-[70%] ${isOwn ? "bg-blue-600" : "bg-zinc-800"} rounded-2xl px-4 py-2`}>
-                {!isOwn && (
-                  <p className="text-xs text-zinc-400 mb-1">
-                    {msg.profiles?.display_name || msg.profiles?.username}
+            <div key={msg.id}>
+              {showDateDivider && (
+                <div className="flex items-center justify-center my-2">
+                  <span className="text-xs text-zinc-500 bg-zinc-900 px-3 py-1 rounded-full">
+                    {formatDateLabel(msg.created_at)}
+                  </span>
+                </div>
+              )}
+              <div className={`flex ${isOwn ? "justify-end" : "justify-start"}`}>
+                <div className={`max-w-[70%] ${isOwn ? "bg-blue-600" : "bg-zinc-800"} rounded-2xl px-4 py-2`}>
+                  {!isOwn && (
+                    <p className="text-xs text-zinc-400 mb-1">
+                      {msg.profiles?.display_name || msg.profiles?.username}
+                    </p>
+                  )}
+                  <p>{msg.content}</p>
+                  <p className={`text-xs mt-1 ${isOwn ? "text-blue-200" : "text-zinc-500"}`}>
+                    {formatTime(msg.created_at)}
                   </p>
-                )}
-                <p>{msg.content}</p>
-                <p className={`text-xs mt-1 ${isOwn ? "text-blue-200" : "text-zinc-500"}`}>
-                  {formatTime(msg.created_at)}
-                </p>
+                </div>
               </div>
             </div>
           );

@@ -49,30 +49,6 @@ export default async function MessagesPage() {
 
   const conversationIds = participations.map((p) => p.conversation_id);
 
-  const unreadEntries = await Promise.all(
-    conversationIds.map(async (conversationId) => {
-      const participation = participations.find(
-        (p) => p.conversation_id === conversationId
-      );
-      const lastReadAt = (participation as { last_read_at?: string | null } | undefined)?.last_read_at ?? null;
-
-      let query = supabase
-        .from("messages")
-        .select("id", { count: "exact", head: true })
-        .eq("conversation_id", conversationId)
-        .neq("sender_id", user.id);
-
-        if (lastReadAt) {
-          query = query.gt("created_at", lastReadAt);
-        }
-
-      const { count } = await query;
-      return [conversationId, count || 0] as const;
-    })
-  );
-
-  const unreadCounts = Object.fromEntries(unreadEntries);
-
   // Get conversation details
   const { data: conversations } = await supabase
     .from("conversations")
@@ -152,11 +128,6 @@ export default async function MessagesPage() {
                   <p className="text-sm text-zinc-400 truncate">{conv.last_message.content}</p>
                 )}
               </div>
-              {unreadCounts[conv.id] > 0 && (
-                <span className="bg-blue-600 text-white text-xs px-2 py-1 rounded-full">
-                  {unreadCounts[conv.id]}
-                </span>
-              )}
             </Link>
           ))}
         </div>
