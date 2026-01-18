@@ -110,14 +110,6 @@ export default function ChatMessages({
     };
   }, [conversationId, supabase]);
 
-  // Mark as read when chat opens
-  useEffect(() => {
-    const markRead = async () => {
-    };
-
-    markRead();
-  }, [conversationId, currentUserId, supabase]);
-
   const handleSend = async () => {
     if (!newMessage.trim() || sending) return;
 
@@ -141,7 +133,7 @@ export default function ChatMessages({
 
   return (
     <div className="flex-1 flex flex-col">
-      <header className="bg-zinc-900 border-b border-zinc-800 p-4 flex items-center justify-between">
+      <header className="bg-zinc-900 border-b border-zinc-800 p-4">
         <h1 className="text-xl font-semibold">{chatName}</h1>
       </header>
 
