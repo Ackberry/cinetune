@@ -91,7 +91,7 @@ export default function MusicSearchPage() {
         </div>
 
         <div className="space-y-2">
-          {results.map((track, index) => {
+          {results.map((track) => {
             const image = track.album.images[0];
             return (
               <div
