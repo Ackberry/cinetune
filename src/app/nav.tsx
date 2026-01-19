@@ -2,6 +2,13 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useEffect, useState } from "react";
+import {
+  NavigationMenu,
+  NavigationMenuItem,
+  NavigationMenuLink,
+  NavigationMenuList,
+} from "@/components/ui/navigation-menu";
 
 type Props = {
   userLabel: string | null;
@@ -17,8 +24,15 @@ const links = [
   { href: "/settings", label: "Settings" },
 ];
 
+const homeSections = [
+  { href: "#top", label: "Home" },
+  { href: "#features", label: "Features" },
+  { href: "#cta", label: "Get Started" },
+];
+
 export default function Nav({ userLabel, isAuthed }: Props) {
   const pathname = usePathname();
+  const [activeSection, setActiveSection] = useState("top");
 
   const isActive = (href: string) => {
     if (href === "/messages") {
@@ -27,21 +41,66 @@ export default function Nav({ userLabel, isAuthed }: Props) {
     return pathname === href;
   };
 
+  useEffect(() => {
+    if (pathname !== "/") return;
+
+    const sections = homeSections
+      .map((section) => document.getElementById(section.href.replace("#", "")))
+      .filter(Boolean) as HTMLElement[];
+
+    if (sections.length === 0) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const visible = entries
+          .filter((entry) => entry.isIntersecting)
+          .sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
+
+        if (visible?.target?.id) {
+          setActiveSection(visible.target.id);
+        }
+      },
+      { rootMargin: "-20% 0px -60% 0px", threshold: [0.1, 0.25, 0.5] }
+    );
+
+    sections.forEach((section) => observer.observe(section));
+    return () => observer.disconnect();
+  }, [pathname]);
+
   return (
-    <nav className="flex items-center gap-4 text-sm">
-      {links.map((link) => (
-        <Link
-          key={link.href}
-          href={link.href}
-          className={
-            isActive(link.href)
-              ? "text-white"
-              : "text-zinc-300 hover:text-white"
-          }
-        >
-          {link.label}
-        </Link>
-      ))}
+    <div className="flex items-center gap-4 text-sm">
+      <NavigationMenu>
+        <NavigationMenuList>
+          {(pathname === "/" ? homeSections : links).map((link) => {
+            const isHomeSection =
+              pathname === "/" && link.href.startsWith("#");
+            const active = isHomeSection
+              ? activeSection === link.href.replace("#", "")
+              : isActive(link.href);
+
+            return (
+              <NavigationMenuItem key={link.href}>
+                <Link
+                  href={isHomeSection ? `/${link.href}` : link.href}
+                  legacyBehavior
+                  passHref
+                >
+                  <NavigationMenuLink
+                    className={
+                      active
+                        ? "text-white px-3 py-2 rounded-md bg-zinc-900"
+                        : "text-zinc-300 hover:text-white px-3 py-2 rounded-md hover:bg-zinc-900"
+                    }
+                  >
+                    {link.label}
+                  </NavigationMenuLink>
+                </Link>
+              </NavigationMenuItem>
+            );
+          })}
+        </NavigationMenuList>
+      </NavigationMenu>
+
       {isAuthed ? (
         <div className="flex items-center gap-3">
           <span className="text-zinc-500">{userLabel}</span>
@@ -54,6 +113,6 @@ export default function Nav({ userLabel, isAuthed }: Props) {
           Sign in
         </Link>
       )}
-    </nav>
+    </div>
   );
 }
