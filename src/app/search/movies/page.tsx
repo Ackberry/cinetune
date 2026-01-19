@@ -16,14 +16,13 @@ export default function MovieSearchPage() {
   const supabase = createClient();
 
   useEffect(() => {
-    if (!query) {
-      setResults([]);
-      setLoading(false);
-      return;
-    }
-
     let active = true;
     const run = async () => {
+      if (!query) {
+        setResults([]);
+        setLoading(false);
+        return;
+      }
       setLoading(true);
       const response = await fetch(`/api/movies/search?q=${encodeURIComponent(query)}`);
       const data = await response.json();
@@ -31,7 +30,6 @@ export default function MovieSearchPage() {
       setResults(data.results || []);
       setLoading(false);
     };
-
     run();
     return () => {
       active = false;

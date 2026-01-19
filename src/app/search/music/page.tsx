@@ -17,14 +17,13 @@ export default function MusicSearchPage() {
   const supabase = createClient();
 
   useEffect(() => {
-    if (!query) {
-      setResults([]);
-      setLoading(false);
-      return;
-    }
-
     let active = true;
     const run = async () => {
+      if (!query) {
+        setResults([]);
+        setLoading(false);
+        return;
+      }
       setLoading(true);
       const response = await fetch(`/api/music/search?q=${encodeURIComponent(query)}`);
       const data = await response.json();
@@ -33,7 +32,6 @@ export default function MusicSearchPage() {
       setResults(items);
       setLoading(false);
     };
-
     run();
     return () => {
       active = false;
