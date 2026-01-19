@@ -1,27 +1,40 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { TMDBMovie } from "@/types/tmdb";
 import { createClient } from "@/lib/supabase/client";
 import Image from "next/image";
 
 export default function MovieSearchPage() {
-  const [query, setQuery] = useState("");
   const [results, setResults] = useState<TMDBMovie[]>([]);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState<number | null>(null);
+  const searchParams = useSearchParams();
+  const query = searchParams.get("query")?.trim() || "";
 
   const supabase = createClient();
 
-  const handleSearch = async () => {
-    if (!query.trim()) return;
-
-    setLoading(true);
-    const response = await fetch(`/api/movies/search?q=${encodeURIComponent(query)}`);
-    const data = await response.json();
-    setResults(data.results || []);
-    setLoading(false);
-  };
+  useEffect(() => {
+    let active = true;
+    const run = async () => {
+      if (!query) {
+        setResults([]);
+        setLoading(false);
+        return;
+      }
+      setLoading(true);
+      const response = await fetch(`/api/movies/search?q=${encodeURIComponent(query)}`);
+      const data = await response.json();
+      if (!active) return;
+      setResults(data.results || []);
+      setLoading(false);
+    };
+    run();
+    return () => {
+      active = false;
+    };
+  }, [query]);
 
   const handleSave = async (movie: TMDBMovie) => {
     setSaving(movie.id);
@@ -62,25 +75,9 @@ export default function MovieSearchPage() {
   return (
     <div className="min-h-screen bg-zinc-950 text-white p-6">
       <div className="max-w-4xl mx-auto">
-        <h1 className="text-3xl font-bold mb-6">Search Movies</h1>
-
-        <div className="flex gap-2 mb-8">
-          <input
-            type="text"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && handleSearch()}
-            placeholder="Search for a movie..."
-            className="flex-1 bg-zinc-900 border border-zinc-800 rounded-lg px-4 py-3 focus:outline-none focus:border-zinc-600"
-          />
-          <button
-            onClick={handleSearch}
-            disabled={loading}
-            className="bg-white text-zinc-900 px-6 py-3 rounded-lg font-medium hover:bg-zinc-100 disabled:opacity-50"
-          >
-            {loading ? "..." : "Search"}
-          </button>
-        </div>
+        <h1 className="text-3xl font-bold mb-6">
+          {query ? `Results for "${query}"` : "Search Movies"}
+        </h1>
 
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           {results.map((movie) => (
@@ -116,7 +113,11 @@ export default function MovieSearchPage() {
         </div>
 
         {results.length === 0 && !loading && (
-          <p className="text-zinc-500 text-center">Search for movies to get started</p>
+          <p className="text-zinc-500 text-center">
+            {query
+              ? "No results found. Try another search."
+              : "Use the search icon in the navbar to search movies."}
+          </p>
         )}
       </div>
     </div>

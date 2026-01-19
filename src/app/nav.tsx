@@ -12,7 +12,6 @@ const links = [
   { href: "/search/movies", label: "Movies" },
   { href: "/search/music", label: "Music" },
   { href: "/library", label: "Library" },
-  { href: "/discover", label: "Discover" },
   { href: "/messages", label: "Messages" },
   { href: "/settings", label: "Settings" },
 ];

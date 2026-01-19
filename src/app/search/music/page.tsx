@@ -1,29 +1,42 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { SpotifyTrack } from "@/types/spotify";
 import { createClient } from "@/lib/supabase/client";
 import Image from "next/image";
 
 
 export default function MusicSearchPage() {
-  const [query, setQuery] = useState("");
   const [results, setResults] = useState<SpotifyTrack[]>([]);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState<string | null>(null);
+  const searchParams = useSearchParams();
+  const query = searchParams.get("query")?.trim() || "";
 
   const supabase = createClient();
 
-  const handleSearch = async () => {
-    if (!query.trim()) return;
-
-    setLoading(true);
-    const response = await fetch(`/api/music/search?q=${encodeURIComponent(query)}`);
-    const data = await response.json();
-    const items = data.tracks?.items || [];
-    setResults(items);
-    setLoading(false);
-  };
+  useEffect(() => {
+    let active = true;
+    const run = async () => {
+      if (!query) {
+        setResults([]);
+        setLoading(false);
+        return;
+      }
+      setLoading(true);
+      const response = await fetch(`/api/music/search?q=${encodeURIComponent(query)}`);
+      const data = await response.json();
+      const items = data.tracks?.items || [];
+      if (!active) return;
+      setResults(items);
+      setLoading(false);
+    };
+    run();
+    return () => {
+      active = false;
+    };
+  }, [query]);
 
   const handleSave = async (track: SpotifyTrack) => {
     setSaving(track.id);
@@ -70,25 +83,9 @@ export default function MusicSearchPage() {
   return (
     <div className="min-h-screen bg-zinc-950 text-white p-6">
       <div className="max-w-4xl mx-auto">
-        <h1 className="text-3xl font-bold mb-6">Search Music</h1>
-
-        <div className="flex gap-2 mb-8">
-          <input
-            type="text"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && handleSearch()}
-            placeholder="Search for a song..."
-            className="flex-1 bg-zinc-900 border border-zinc-800 rounded-lg px-4 py-3 focus:outline-none focus:border-zinc-600"
-          />
-          <button
-            onClick={handleSearch}
-            disabled={loading}
-            className="bg-white text-zinc-900 px-6 py-3 rounded-lg font-medium hover:bg-zinc-100 disabled:opacity-50"
-          >
-            {loading ? "..." : "Search"}
-          </button>
-        </div>
+        <h1 className="text-3xl font-bold mb-6">
+          {query ? `Results for "${query}"` : "Search Music"}
+        </h1>
 
         <div className="space-y-2">
           {results.map((track) => {
@@ -133,7 +130,11 @@ export default function MusicSearchPage() {
         </div>
 
         {results.length === 0 && !loading && (
-          <p className="text-zinc-500 text-center">Search for music to get started</p>
+          <p className="text-zinc-500 text-center">
+            {query
+              ? "No results found. Try another search."
+              : "Use the search icon in the navbar to search music."}
+          </p>
         )}
       </div>
     </div>
