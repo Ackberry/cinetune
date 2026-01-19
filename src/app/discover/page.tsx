@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import Link from "next/link";
+import Image from "next/image";
 
 type Profile = {
   id: string;
@@ -86,7 +87,7 @@ export default function DiscoverPage() {
               className="flex items-center gap-4 bg-zinc-900 rounded-lg p-4 hover:bg-zinc-800 transition-colors"
             >
               {profile.avatar_url ? (
-                <img
+                <Image
                   src={profile.avatar_url}
                   alt={profile.username || "User"}
                   className="w-12 h-12 rounded-full object-cover"
