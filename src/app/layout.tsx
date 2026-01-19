@@ -48,7 +48,6 @@ export default async function RootLayout({
         <div className="min-h-screen bg-black text-white">
           <header className="sticky top-0 z-50 border-b border-white/10 bg-black/80 backdrop-blur-xl">
             <div className="max-w-7xl mx-auto px-4 md:px-6 lg:px-8 py-4 flex items-center gap-6">
-              <HeaderSearch />
               <Link href="/" className="flex items-center gap-3">
                 <div className="h-10 w-10 rounded-full bg-gradient-to-br from-purple-500 via-pink-500 to-orange-500 flex items-center justify-center text-white font-bold">
                   C
@@ -60,6 +59,7 @@ export default async function RootLayout({
                   <Sparkles className="h-4 w-4 text-purple-300" />
                 </div>
               </Link>
+              <HeaderSearch />
 
               <div className="ml-auto">
                 <Nav userLabel={userLabel || null} isAuthed={!!user} />
