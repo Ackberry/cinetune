@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useEffect, useRef, useState } from "react";
 
 type Props = {
   userLabel: string | null;
@@ -18,6 +19,8 @@ const links = [
 
 export default function Nav({ userLabel, isAuthed }: Props) {
   const pathname = usePathname();
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
 
   const isActive = (href: string) => {
     if (href === "/messages") {
@@ -26,27 +29,59 @@ export default function Nav({ userLabel, isAuthed }: Props) {
     return pathname === href;
   };
 
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (!menuRef.current) return;
+      if (!menuRef.current.contains(event.target as Node)) {
+        setMenuOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
   return (
     <nav className="flex items-center gap-4 text-sm">
-      {links.map((link) => (
-        <Link
-          key={link.href}
-          href={link.href}
-          className={
-            isActive(link.href)
-              ? "text-white"
-              : "text-zinc-300 hover:text-white"
-          }
-        >
-          {link.label}
-        </Link>
-      ))}
       {isAuthed ? (
-        <div className="flex items-center gap-3">
-          <span className="text-zinc-500">{userLabel}</span>
-          <form action="/auth/signout" method="post">
-            <button className="text-zinc-300 hover:text-white">Sign out</button>
-          </form>
+        <div className="relative" ref={menuRef}>
+          <button
+            type="button"
+            onClick={() => setMenuOpen((prev) => !prev)}
+            className="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-white/80 hover:text-white hover:bg-white/10 transition"
+          >
+            {userLabel || "Profile"}
+          </button>
+          {menuOpen ? (
+            <div className="absolute right-0 mt-3 w-56 rounded-2xl border border-white/10 bg-zinc-950/95 backdrop-blur-xl shadow-xl">
+              <div className="p-2">
+                {links.map((link) => (
+                  <Link
+                    key={link.href}
+                    href={link.href}
+                    className={`block rounded-lg px-3 py-2 text-sm transition ${
+                      isActive(link.href)
+                        ? "text-white bg-white/10"
+                        : "text-white/80 hover:bg-white/10 hover:text-white"
+                    }`}
+                    onClick={() => setMenuOpen(false)}
+                  >
+                    {link.label}
+                  </Link>
+                ))}
+              </div>
+              <div className="border-t border-white/10 p-2">
+                <form action="/auth/signout" method="post">
+                  <button
+                    type="submit"
+                    className="w-full text-left rounded-lg px-3 py-2 text-sm text-red-400 hover:bg-red-500/10 hover:text-red-300"
+                  >
+                    Sign out
+                  </button>
+                </form>
+              </div>
+            </div>
+          ) : null}
         </div>
       ) : (
         <Link href="/login" className="text-zinc-300 hover:text-white">
