@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { motion } from "motion/react";
 import {
   Clock,
@@ -23,6 +23,23 @@ type MediaItem = {
   rating?: number;
   type: "movie" | "music";
   gradient: string;
+};
+
+type TrendingMovie = {
+  id: number;
+  title: string;
+  poster_path: string | null;
+  release_date?: string;
+  vote_average?: number;
+};
+
+type SpotifyTrackItem = {
+  track?: {
+    id: string;
+    name: string;
+    artists: { name: string }[];
+    album?: { images?: { url: string }[] };
+  };
 };
 
 const stats = [
@@ -107,6 +124,13 @@ const mediaItems: MediaItem[] = [
   },
 ];
 
+const trendingGradients = [
+  "from-orange-500/40 to-purple-900/60",
+  "from-blue-500/40 to-purple-900/60",
+  "from-cyan-500/40 to-purple-900/60",
+  "from-pink-500/40 to-purple-900/60",
+];
+
 const activityItems = [
   {
     id: 1,
@@ -136,10 +160,81 @@ const tabs = [
 
 export default function Home() {
   const [activeTab, setActiveTab] = useState("trending");
+  const [trendingMix, setTrendingMix] = useState<MediaItem[] | null>(null);
   const scrollItems = useMemo(
     () => [...mediaItems, ...mediaItems, ...mediaItems],
     []
   );
+
+  useEffect(() => {
+    const loadTrending = async () => {
+      try {
+        const [moviesResponse, tracksResponse] = await Promise.all([
+          fetch("/api/movies/trending?time=week"),
+          fetch("/api/music/top-tracks"),
+        ]);
+
+        if (!moviesResponse.ok || !tracksResponse.ok) return;
+
+        const moviesData = await moviesResponse.json();
+        const tracksData = await tracksResponse.json();
+
+        const movieItems: TrendingMovie[] = moviesData.results || [];
+        const mappedMovies = movieItems.slice(0, 4).map((movie, index) => {
+          const year = movie.release_date?.split("-")[0];
+          const rating =
+            typeof movie.vote_average === "number"
+              ? Math.round((movie.vote_average / 2) * 10) / 10
+              : undefined;
+
+          return {
+            id: movie.id,
+            title: movie.title,
+            subtitle: year ? `Trending • ${year}` : "Trending",
+            image: movie.poster_path
+              ? `https://image.tmdb.org/t/p/w780${movie.poster_path}`
+              : "https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?w=800",
+            rating,
+            type: "movie",
+            gradient: trendingGradients[index % trendingGradients.length],
+          } satisfies MediaItem;
+        });
+
+        const trackItems: SpotifyTrackItem[] = tracksData.items || [];
+        const mappedTracks = trackItems
+          .filter((item) => item.track?.id)
+          .slice(0, 4)
+          .map((item, index) => {
+            const track = item.track!;
+            const artists = track.artists?.map((a) => a.name).join(", ");
+            return {
+              id: Number.parseInt(track.id, 36),
+              title: track.name,
+              subtitle: artists || "Trending",
+              image:
+                track.album?.images?.[0]?.url ||
+                "https://images.unsplash.com/photo-1511379938547-c1f69419868d?w=800",
+              type: "music",
+              gradient: trendingGradients[index % trendingGradients.length],
+            } satisfies MediaItem;
+          });
+
+        const mixed = [...mappedMovies, ...mappedTracks];
+        for (let i = mixed.length - 1; i > 0; i -= 1) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [mixed[i], mixed[j]] = [mixed[j], mixed[i]];
+        }
+
+        if (mixed.length >= 6) {
+          setTrendingMix(mixed);
+        }
+      } catch (error) {
+        console.error("Failed to load trending mix", error);
+      }
+    };
+
+    loadTrending();
+  }, []);
 
   return (
     <div className="min-h-screen bg-black text-white">
@@ -181,7 +276,7 @@ export default function Home() {
         </section>
 
         <section className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-          {mediaItems.map((item) => (
+          {(trendingMix || mediaItems.slice(0, 4)).map((item) => (
             <MediaCard key={item.id} {...item} />
           ))}
         </section>
