@@ -25,7 +25,7 @@ export default function WatchMoviePage({
           </Link>
         </div>
 
-        <WatchPlayer tmdbId={params.tmdbId} searchParams={searchParams} />
+        <WatchPlayer tmdbId={params.tmdbId}/>
       </div>
     </div>
   );
