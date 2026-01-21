@@ -17,6 +17,7 @@ import Link from "next/link";
 
 type MediaItem = {
   id: number;
+  tmdbId?: number;
   title: string;
   subtitle: string;
   image: string;
@@ -29,6 +30,7 @@ type TrendingMovie = {
   id: number;
   title: string;
   poster_path: string | null;
+  backdrop_path?: string | null;
   release_date?: string;
   vote_average?: number;
 };
@@ -71,7 +73,8 @@ const stats = [
 
 const mediaItems: MediaItem[] = [
   {
-    id: 1,
+    id: 693134,
+    tmdbId: 693134,
     title: "Dune: Part Two",
     subtitle: "Denis Villeneuve • 2024",
     image: "https://images.unsplash.com/photo-1519356627567-4ce7d70b448b?w=800",
@@ -88,7 +91,8 @@ const mediaItems: MediaItem[] = [
     gradient: "from-blue-500/40 to-purple-900/60",
   },
   {
-    id: 3,
+    id: 872585,
+    tmdbId: 872585,
     title: "Oppenheimer",
     subtitle: "Christopher Nolan • 2023",
     image: "https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?w=800",
@@ -97,7 +101,8 @@ const mediaItems: MediaItem[] = [
     gradient: "from-orange-500/40 to-red-900/60",
   },
   {
-    id: 4,
+    id: 335984,
+    tmdbId: 335984,
     title: "Blade Runner 2049",
     subtitle: "Denis Villeneuve • 2017",
     image: "https://images.unsplash.com/photo-1510511459019-5dda7724fd87?w=800",
@@ -114,7 +119,8 @@ const mediaItems: MediaItem[] = [
     gradient: "from-red-500/40 to-black/70",
   },
   {
-    id: 6,
+    id: 792307,
+    tmdbId: 792307,
     title: "Poor Things",
     subtitle: "Yorgos Lanthimos • 2023",
     image: "https://images.unsplash.com/photo-1521737604893-d14cc237f11d?w=800",
@@ -186,13 +192,15 @@ export default function Home() {
             typeof movie.vote_average === "number"
               ? Math.round((movie.vote_average / 2) * 10) / 10
               : undefined;
+          const posterPath = movie.poster_path || movie.backdrop_path;
 
           return {
             id: movie.id,
+            tmdbId: movie.id,
             title: movie.title,
             subtitle: year ? `Trending • ${year}` : "Trending",
-            image: movie.poster_path
-              ? `https://image.tmdb.org/t/p/w780${movie.poster_path}`
+            image: posterPath
+              ? `https://image.tmdb.org/t/p/w780${posterPath}`
               : "https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?w=800",
             rating,
             type: "movie",
@@ -382,14 +390,26 @@ function Tabs({ activeTab, onChange }: TabsProps) {
   );
 }
 
-function MediaCard({ title, subtitle, image, rating, type, gradient }: MediaItem) {
+function MediaCard({
+  id,
+  tmdbId,
+  title,
+  subtitle,
+  image,
+  rating,
+  type,
+  gradient,
+}: MediaItem) {
   const isMovie = type === "movie";
-  return (
-    <div className="group">
+  const watchId = tmdbId ?? id;
+  const content = (
+    <>
       <div className="relative aspect-[3/4] rounded-2xl overflow-hidden">
-        <div
-          className="absolute inset-0 bg-cover bg-center transition duration-500 group-hover:scale-110"
-          style={{ backgroundImage: `url(${image})` }}
+        <img
+          src={image}
+          alt={title}
+          loading="lazy"
+          className="absolute inset-0 h-full w-full object-cover transition duration-500 group-hover:scale-110"
         />
         <div
           className={`absolute inset-0 bg-gradient-to-b ${gradient} transition duration-500 group-hover:opacity-70`}
@@ -420,6 +440,16 @@ function MediaCard({ title, subtitle, image, rating, type, gradient }: MediaItem
         <p className="text-sm font-semibold text-white truncate">{title}</p>
         <p className="text-xs text-gray-400 truncate">{subtitle}</p>
       </div>
-    </div>
+    </>
   );
+
+  if (isMovie) {
+    return (
+      <Link href={`/watch/movie/${watchId}`} className="group block">
+        {content}
+      </Link>
+    );
+  }
+
+  return <div className="group">{content}</div>;
 }
