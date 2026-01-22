@@ -27,18 +27,28 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  const { data: profile } = user
-    ? await supabase
-        .from("profiles")
-        .select("username")
-        .eq("id", user.id)
-        .single()
-    : { data: null };
-  const userLabel = profile?.username || user?.email || "";
+  let user: { id: string; email?: string | null } | null = null;
+  let userLabel = "";
+
+  try {
+    const supabase = await createClient();
+    const {
+      data: { user: fetchedUser },
+    } = await supabase.auth.getUser();
+    user = fetchedUser;
+
+    const { data: profile } = user
+      ? await supabase
+          .from("profiles")
+          .select("username")
+          .eq("id", user.id)
+          .single()
+      : { data: null };
+    userLabel = profile?.username || user?.email || "";
+  } catch {
+    user = null;
+    userLabel = "";
+  }
 
   return (
     <html lang="en">
